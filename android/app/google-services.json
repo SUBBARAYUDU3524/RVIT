@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "527348565981",
+    "project_id": "application-ff16b",
+    "storage_bucket": "application-ff16b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527348565981:android:cda20abd5af85f9322d834",
+        "android_client_info": {
+          "package_name": "com.rvit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBF4-8eFeK-KMpP7sWCia2PNnXhhgo9NUo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
