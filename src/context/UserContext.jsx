@@ -53,7 +53,7 @@ export const UserProvider = ({children}) => {
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem('SVU_Token');
+    await AsyncStorage.removeItem('RVIT_Token');
     await auth().signOut();
     setIsLoggedIn(false);
     setFullProfile(null);

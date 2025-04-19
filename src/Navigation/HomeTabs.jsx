@@ -1,12 +1,11 @@
-import React, {useContext, useState} from 'react';
+import React, {useState} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import UserContext from '../context/UserContext';
-import ProfileScreen from '../screens/ProfileScreen';
-import NotificationScreen from '../screens/NotificationScreen';
 import HomeScreen from '../screens/HomeScreen';
-import ChatScreen from '../screens/AuthScreens/ChatScreen';
+import NotificationScreen from '../screens/NotificationScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import ChatScreen from '../screens/ChatScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -47,6 +46,7 @@ const HomeTabs = () => {
       {/* Common Screens for All Users */}
       <Tab.Screen
         name="Home"
+        component={HomeScreen}
         options={{
           headerShown: false,
           tabBarButton: props => (
@@ -54,12 +54,11 @@ const HomeTabs = () => {
               <Icon name="home" size={25} color="#FF4500" />
             </CustomHomeButton>
           ),
-        }}>
-        {props => <HomeScreen {...props} setSelectedTab={setSelectedTab} />}
-      </Tab.Screen>
-
+        }}
+      />
       <Tab.Screen
         name="Notifications"
+        component={NotificationScreen}
         options={{
           tabBarButton: props => (
             <CustomHomeButton
@@ -68,26 +67,22 @@ const HomeTabs = () => {
               <Icon name="bell" size={25} color="#FF4500" />
             </CustomHomeButton>
           ),
-        }}>
-        {props => (
-          <NotificationScreen {...props} setSelectedTab={setSelectedTab} />
-        )}
-      </Tab.Screen>
-
+        }}
+      />
       <Tab.Screen
         name="Profile"
+        component={ProfileScreen}
         options={{
           tabBarButton: props => (
             <CustomHomeButton {...props} isActive={selectedTab === 'Profile'}>
               <Icon name="user" size={25} color="#FF4500" />
             </CustomHomeButton>
           ),
-        }}>
-        {props => <ProfileScreen {...props} setSelectedTab={setSelectedTab} />}
-      </Tab.Screen>
-
+        }}
+      />
       <Tab.Screen
         name="Chat"
+        component={ChatScreen}
         options={{
           tabBarButton: props => (
             <CustomHomeButton {...props} isActive={selectedTab === 'Chat'}>
@@ -95,9 +90,8 @@ const HomeTabs = () => {
             </CustomHomeButton>
           ),
           headerShown: false, // This will hide the header
-        }}>
-        {props => <ChatScreen {...props} setSelectedTab={setSelectedTab} />}
-      </Tab.Screen>
+        }}
+      />
     </Tab.Navigator>
   );
 };
