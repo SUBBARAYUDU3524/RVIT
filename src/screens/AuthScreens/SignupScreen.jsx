@@ -27,18 +27,23 @@ const SignupScreen = ({navigation}) => {
 
     try {
       setLoading(true);
-      // Create user in Firebase Auth
+
+      // Create user
       const userCredential = await auth().createUserWithEmailAndPassword(
         email,
         password,
       );
       const user = userCredential.user;
 
-      // Update Firebase user profile
+      // Force reload after updateProfile
       await user.updateProfile({displayName: username});
+      await user.reload(); // Important: make sure the updated profile is loaded
 
-      // Store user data in Firestore
-      await firestore().collection('users').doc(user.uid).set({
+      console.log('User UID:', user.uid);
+      console.log('User displayName after update:', user.displayName);
+
+      // Store data in Firestore
+      await firestore().collection('RVIT_USERS').doc(user.uid).set({
         username: username,
         email: email,
         createdAt: firestore.FieldValue.serverTimestamp(),

@@ -14,7 +14,9 @@ export const UserProvider = ({children}) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const token = await AsyncStorage.getItem('SVU_Token');
+        const token = await AsyncStorage.getItem('RVIT_Token');
+        console.log(token, 'token');
+
         if (token) {
           setIsLoggedIn(true);
           await fetchFullProfile();

@@ -70,17 +70,6 @@ const HomeTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          tabBarButton: props => (
-            <CustomHomeButton {...props} isActive={selectedTab === 'Profile'}>
-              <Icon name="user" size={25} color="#FF4500" />
-            </CustomHomeButton>
-          ),
-        }}
-      />
-      <Tab.Screen
         name="Chat"
         component={ChatScreen}
         options={{
@@ -89,7 +78,18 @@ const HomeTabs = () => {
               <Icon name="wechat" size={25} color="#FF4500" />
             </CustomHomeButton>
           ),
-          headerShown: false, // This will hide the header
+          headerShown: false,
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarButton: props => (
+            <CustomHomeButton {...props} isActive={selectedTab === 'Profile'}>
+              <Icon name="user" size={25} color="#FF4500" />
+            </CustomHomeButton>
+          ),
         }}
       />
     </Tab.Navigator>
