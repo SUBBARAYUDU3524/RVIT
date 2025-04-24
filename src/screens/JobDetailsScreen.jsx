@@ -7,55 +7,95 @@ import {
   StyleSheet,
 } from 'react-native';
 import {Card, Title, Divider, Button} from 'react-native-paper';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const JobDetailsScreen = ({route, navigation}) => {
   const {job} = route.params;
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollContainer}>
+      <ScrollView
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}>
         <Card style={styles.headerCard}>
           <Card.Content>
-            <Title style={styles.jobTitle}>{job.title}</Title>
-            <Text style={styles.company}>{job.company}</Text>
-            <View style={styles.metaContainer}>
-              <Text style={styles.metaText}>{job.location}</Text>
-              <Text style={styles.metaText}>•</Text>
-              <Text style={styles.metaText}>{job.type}</Text>
-              <Text style={styles.metaText}>•</Text>
-              <Text style={styles.metaText}>{job.salary}</Text>
+            <View style={styles.headerContent}>
+              <Title style={styles.jobTitle}>{job.title}</Title>
+              <Text style={styles.company}>{job.company}</Text>
+
+              <View style={styles.metaContainer}>
+                <View style={styles.metaItem}>
+                  <MaterialIcons name="location-on" size={16} color="#4E8AF4" />
+                  <Text style={styles.metaText}>{job.location}</Text>
+                </View>
+
+                <View style={styles.metaItem}>
+                  <MaterialIcons name="work" size={16} color="#4E8AF4" />
+                  <Text style={styles.metaText}>{job.type}</Text>
+                </View>
+
+                <View style={styles.metaItem}>
+                  <MaterialIcons
+                    name="attach-money"
+                    size={16}
+                    color="#4E8AF4"
+                  />
+                  <Text style={styles.metaText}>{job.salary}</Text>
+                </View>
+              </View>
+
+              <View style={styles.postedContainer}>
+                <MaterialIcons name="access-time" size={14} color="#718096" />
+                <Text style={styles.postedDate}>
+                  Posted: {new Date(job.posted).toDateString()}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.postedDate}>Posted: {job.posted}</Text>
           </Card.Content>
         </Card>
 
         <Card style={styles.detailCard}>
           <Card.Content>
-            <Title style={styles.sectionTitle}>Job Description</Title>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="description" size={20} color="#4E8AF4" />
+              <Title style={styles.sectionTitle}>Job Description</Title>
+            </View>
+            <Divider style={styles.divider} />
             <Text style={styles.descriptionText}>{job.description}</Text>
 
-            <Title style={styles.sectionTitle}>Requirements</Title>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="list-alt" size={20} color="#4E8AF4" />
+              <Title style={styles.sectionTitle}>Requirements</Title>
+            </View>
+            <Divider style={styles.divider} />
             {job.requirements.map((req, index) => (
-              <View key={index} style={styles.requirementItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.requirementText}>{req}</Text>
+              <View key={index} style={styles.listItem}>
+                <MaterialIcons
+                  name="check-circle"
+                  size={16}
+                  color="#4E8AF4"
+                  style={styles.bulletIcon}
+                />
+                <Text style={styles.listText}>{req}</Text>
               </View>
             ))}
 
-            <Title style={styles.sectionTitle}>Responsibilities</Title>
-            {/* Add responsibilities list similar to requirements */}
-
-            <Title style={styles.sectionTitle}>Benefits</Title>
-            {/* Add benefits list */}
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.companyCard}>
-          <Card.Content>
-            <Title style={styles.sectionTitle}>About {job.company}</Title>
-            <Text style={styles.descriptionText}>
-              {/* Add company description */}
-            </Text>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="assignment" size={20} color="#4E8AF4" />
+              <Title style={styles.sectionTitle}>Responsibilities</Title>
+            </View>
+            <Divider style={styles.divider} />
+            {job.responsibilities.map((res, index) => (
+              <View key={index} style={styles.listItem}>
+                <MaterialIcons
+                  name="play-arrow"
+                  size={16}
+                  color="#4E8AF4"
+                  style={styles.bulletIcon}
+                />
+                <Text style={styles.listText}>{res}</Text>
+              </View>
+            ))}
           </Card.Content>
         </Card>
       </ScrollView>
@@ -64,9 +104,9 @@ const JobDetailsScreen = ({route, navigation}) => {
         <Button
           mode="contained"
           style={styles.applyButton}
-          onPress={() =>
-            navigation.navigate('JobApplication', {jobId: job.id})
-          }>
+          labelStyle={styles.applyButtonLabel}
+          onPress={() => navigation.navigate('JobApplication', {jobId: job.id})}
+          icon="send">
           Apply Now
         </Button>
       </View>
@@ -77,85 +117,138 @@ const JobDetailsScreen = ({route, navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFF',
   },
   scrollContainer: {
     padding: 16,
   },
   headerCard: {
-    borderRadius: 8,
-    marginBottom: 16,
-    elevation: 2,
+    borderRadius: 12,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#4E8AF4',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  headerContent: {
+    padding: 8,
   },
   jobTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 4,
+    color: '#2D3748',
   },
   company: {
     fontSize: 18,
-    color: '#333',
-    marginBottom: 8,
+    color: '#4A5568',
+    marginBottom: 16,
+    fontWeight: '500',
   },
   metaContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    gap: 12,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EBF4FF',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   metaText: {
-    marginRight: 8,
-    color: '#666',
+    marginLeft: 4,
+    color: '#4A5568',
+    fontSize: 14,
+  },
+  postedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
   },
   postedDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#718096',
+    marginLeft: 4,
   },
   detailCard: {
-    borderRadius: 8,
-    marginBottom: 16,
-    elevation: 2,
+    borderRadius: 12,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#4E8AF4',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
+    fontWeight: '600',
+    marginLeft: 8,
+    color: '#2D3748',
+  },
+  divider: {
+    marginVertical: 12,
+    backgroundColor: '#E2E8F0',
+    height: 1,
   },
   descriptionText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#333',
+    color: '#4A5568',
     marginBottom: 8,
   },
-  requirementItem: {
+  listItem: {
     flexDirection: 'row',
-    marginBottom: 4,
+    marginBottom: 8,
+    alignItems: 'flex-start',
   },
-  bullet: {
+  bulletIcon: {
+    marginTop: 3,
     marginRight: 8,
   },
-  requirementText: {
+  listText: {
     flex: 1,
     fontSize: 14,
-    lineHeight: 22,
-    color: '#333',
-  },
-  companyCard: {
-    borderRadius: 8,
-    marginBottom: 16,
-    elevation: 2,
+    lineHeight: 20,
+    color: '#4A5568',
   },
   footer: {
     padding: 16,
     backgroundColor: 'white',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#EDF2F7',
+    shadowColor: '#1A365D',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 10,
   },
   applyButton: {
-    borderRadius: 4,
-    paddingVertical: 8,
-    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    paddingVertical: 10,
+    backgroundColor: '#4E8AF4',
+    shadowColor: '#4E8AF4',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  applyButtonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 });
 

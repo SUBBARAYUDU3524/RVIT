@@ -1,79 +1,94 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   ScrollView,
   Text,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
-import {Card, Title, IconButton} from 'react-native-paper';
+import {Card, Title} from 'react-native-paper';
+import firestore from '@react-native-firebase/firestore';
 
 const AllSupportCategoriesScreen = ({navigation}) => {
-  const allCategories = [
-    {
-      id: 1,
-      name: 'Technical Support',
-      description: 'Get help with technical issues and troubleshooting.',
-      icon: 'tools',
-    },
-    {
-      id: 2,
-      name: 'Billing Support',
-      description: 'Assistance with billing and payment inquiries.',
-      icon: 'credit-card',
-    },
-    {
-      id: 3,
-      name: 'Account Support',
-      description: 'Help with account creation, login, and settings.',
-      icon: 'account-circle',
-    },
-    {
-      id: 4,
-      name: 'Product Support',
-      description: 'Guidance on product features and usage.',
-      icon: 'shopping-cart',
-    },
-    {
-      id: 5,
-      name: 'Feedback',
-      description: 'Submit your feedback and suggestions.',
-      icon: 'message',
-    },
-    {
-      id: 6,
-      name: 'FAQs',
-      description: 'Find answers to frequently asked questions.',
-      icon: 'help-circle',
-    },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const querySnapshot = await firestore().collection('support').get();
+        const categoriesData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCategories(categoriesData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching categories: ', error);
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4E8AF4" />
+        <Text style={styles.loadingText}>Loading Support Options...</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
       <Card style={styles.card}>
         <Card.Content>
-          <Title style={styles.title}>All Support Categories</Title>
+          <Title style={styles.title}>Expert Support Categories</Title>
+          <Text style={styles.subtitle}>
+            Tap any category to get specialized assistance
+          </Text>
 
           <View style={styles.gridContainer}>
-            {allCategories.map(category => (
+            {categories.map((category, index) => (
               <TouchableOpacity
                 key={category.id}
-                style={styles.gridItem}
+                style={[
+                  styles.gridItem,
+                  index % 2 === 0 ? styles.gridItemLeft : styles.gridItemRight,
+                ]}
+                activeOpacity={0.7}
                 onPress={() =>
                   navigation.navigate('SupportCategoryDetails', {category})
                 }>
-                <View style={styles.iconContainer}>
-                  <IconButton
-                    icon={category.icon}
-                    size={32}
-                    color="#2196F3"
-                    style={styles.icon}
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={
+                      category.imageUrl
+                        ? {uri: category.imageUrl}
+                        : require('../assets/user.jpg')
+                    }
+                    style={styles.categoryImage}
+                    resizeMode="cover"
                   />
+                  <View style={styles.imageOverlay} />
                 </View>
-                <Text style={styles.itemName}>{category.name}</Text>
-                <Text style={styles.itemDescription}>
-                  {category.description}
+                <Text style={styles.itemName} numberOfLines={1}>
+                  {category.name || 'Support Category'}
                 </Text>
+                <Text style={styles.priceText}>$1.00 booking fee</Text>
+                <Text style={styles.itemDescription} numberOfLines={2}>
+                  {category.description || 'Get expert support for your issues'}
+                </Text>
+                <View style={styles.learnMoreContainer}>
+                  <Text style={styles.learnMoreText}>Learn More →</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -86,51 +101,133 @@ const AllSupportCategoriesScreen = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFF',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  priceText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFF',
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#4E8AF4',
+    fontFamily: 'System',
+    fontWeight: '500',
   },
   card: {
-    borderRadius: 10,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#4E8AF4',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: 'hidden',
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
     textAlign: 'center',
+    color: '#2D3748',
+    fontFamily: 'System',
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#718096',
+    marginBottom: 24,
+    fontFamily: 'System',
+    fontWeight: '400',
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    paddingHorizontal: 4,
   },
   gridItem: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
+    shadowColor: '#1A365D',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  gridItemLeft: {
+    marginRight: 2,
+  },
+  gridItemRight: {
+    marginLeft: 2,
+  },
+  imageContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    overflow: 'hidden',
     marginBottom: 16,
-    elevation: 2,
-    alignItems: 'center',
+    alignSelf: 'center',
+    position: 'relative',
   },
-  iconContainer: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 50,
-    padding: 12,
-    marginBottom: 12,
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(78, 138, 244, 0.1)',
   },
-  icon: {
-    margin: 0,
+  categoryImage: {
+    width: '100%',
+    height: '100%',
   },
   itemName: {
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 16,
-    marginBottom: 4,
+    marginBottom: 8,
     textAlign: 'center',
+    color: '#2D3748',
+    fontFamily: 'System',
   },
   itemDescription: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: '#718096',
     textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 18,
+    fontFamily: 'System',
+  },
+  learnMoreContainer: {
+    alignSelf: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#EBF4FF',
+  },
+  learnMoreText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4E8AF4',
+    fontFamily: 'System',
   },
 });
 

@@ -1,111 +1,115 @@
-import React from 'react';
-import {View, TouchableOpacity, Text, ScrollView} from 'react-native';
-import {Card, Title, Paragraph, IconButton} from 'react-native-paper';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import {Card, Title} from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import firestore from '@react-native-firebase/firestore';
 
 const TrainingsSection = React.forwardRef(({navigation}, ref) => {
-  const recommendedCourses = [
-    {
-      id: 1,
-      title: 'React Native Masterclass',
-      instructor: 'Jane Smith',
-      duration: '12 hours',
-      level: 'Intermediate',
-    },
-    {
-      id: 2,
-      title: 'Advanced JavaScript Patterns',
-      instructor: 'John Doe',
-      duration: '8 hours',
-      level: 'Advanced',
-    },
-    {
-      id: 3,
-      title: 'UI/UX for Developers',
-      instructor: 'Alex Johnson',
-      duration: '6 hours',
-      level: 'Beginner',
-    },
-    {
-      id: 4,
-      title: 'Node.js Backend Development',
-      instructor: 'Sarah Williams',
-      duration: '10 hours',
-      level: 'Intermediate',
-    },
-  ];
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const snapshot = await firestore().collection('courses').limit(3).get();
+
+        const coursesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCourses(coursesData);
+      } catch (err) {
+        console.error('Error fetching courses:', err);
+        setError('Failed to load courses. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  if (error) {
+    return (
+      <Card style={styles.sectionCard} ref={ref}>
+        <Card.Content>
+          <Title style={styles.sectionTitle}>Recommended Courses</Title>
+          <Text style={styles.errorText}>{error}</Text>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   return (
     <Card style={styles.sectionCard} ref={ref}>
       <Card.Content>
-        <Title style={{marginTop: 16}}>Your Ongoing Trainings</Title>
-        <View style={styles.trainingItem}>
-          <View>
-            <Paragraph>Advanced React Native</Paragraph>
-            <View style={styles.progressContainer}>
-              <View style={[styles.progressBar, {width: '65%'}]} />
-              <Text style={styles.progressText}>65% Completed</Text>
-            </View>
-          </View>
-          <IconButton
-            icon="play-circle-outline"
-            onPress={() => navigation.navigate('TrainingSession')}
-          />
+        <View style={styles.headerContainer}>
+          <Title style={styles.sectionTitle}>Recommended Courses</Title>
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={() => navigation.navigate('AllCourses')}>
+            <Text style={styles.viewAllText}>View All</Text>
+            <Icon name="chevron-right" size={16} color="#2196F3" />
+          </TouchableOpacity>
         </View>
 
-        <Title style={{marginTop: 16}}>Upcoming Sessions</Title>
-        <View style={styles.sessionItem}>
-          <IconButton icon="calendar-clock" size={20} />
-          <View style={styles.sessionDetails}>
-            <Paragraph>React Native Performance</Paragraph>
-            <Paragraph>Today, 3:00 PM - 4:30 PM</Paragraph>
-          </View>
-          <IconButton
-            icon="video-outline"
-            onPress={() => navigation.navigate('JoinSession')}
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color="#2196F3"
+            style={styles.loader}
           />
-        </View>
-        <View style={styles.sessionItem}>
-          <IconButton icon="calendar-clock" size={20} />
-          <View style={styles.sessionDetails}>
-            <Paragraph>Technical Interview</Paragraph>
-            <Paragraph>Tomorrow, 10:00 AM - 10:45 AM</Paragraph>
-          </View>
-          <IconButton
-            icon="video-outline"
-            onPress={() => navigation.navigate('JoinSession')}
-          />
-        </View>
-        <Title>Recommended Courses</Title>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.coursesContainer}>
-          {recommendedCourses.map((course, index) => (
-            <TouchableOpacity
-              key={course.id}
-              style={styles.courseCard}
-              onPress={() =>
-                navigation.navigate('CourseDetails', {courseId: course.id})
-              }>
-              <View style={styles.courseImagePlaceholder}>
-                <IconButton icon="book" size={24} color="#666" />
-              </View>
-              <Text style={styles.courseTitle} numberOfLines={1}>
-                {course.title}
-              </Text>
-              <Text style={styles.courseInstructor}>{course.instructor}</Text>
-              <View style={styles.courseMeta}>
-                <Text style={styles.courseDuration}>{course.duration}</Text>
-                <Text style={styles.courseLevel}>{course.level}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <TouchableOpacity
-          style={styles.viewAllButton}
-          onPress={() => navigation.navigate('AllCourses')}>
-          <Text style={styles.viewAllText}>View All Courses</Text>
-        </TouchableOpacity>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.coursesContainer}>
+            {courses.map(course => (
+              <TouchableOpacity
+                key={course.id}
+                style={styles.courseCard}
+                onPress={() => navigation.navigate('CourseDetails', {course})}>
+                {course.imageUrl ? (
+                  <Image
+                    source={{uri: course.imageUrl}}
+                    style={styles.courseImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.courseImagePlaceholder}>
+                    <Icon name="book" size={32} color="#666" />
+                  </View>
+                )}
+                <Text style={styles.courseTitle} numberOfLines={2}>
+                  {course.title}
+                </Text>
+                <Text style={styles.courseInstructor} numberOfLines={1}>
+                  <Icon name="account" size={12} color="#666" />{' '}
+                  {course.instructor}
+                </Text>
+                <View style={styles.courseMeta}>
+                  <View style={styles.metaItem}>
+                    <Icon name="clock-outline" size={12} color="#666" />
+                    <Text style={styles.metaText}>{course.duration}</Text>
+                  </View>
+                  <View style={styles.ratingContainer}>
+                    <Icon name="star" size={12} color="#FFC107" />
+                    <Text style={styles.ratingText}>{course.rating}</Text>
+                  </View>
+                </View>
+                <Text style={styles.courseFee}>$ {course.fee}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </Card.Content>
     </Card>
   );
@@ -113,22 +117,60 @@ const TrainingsSection = React.forwardRef(({navigation}, ref) => {
 
 const styles = {
   sectionCard: {
+    backgroundColor: '#fff',
     marginBottom: 16,
-    borderRadius: 10,
+    borderRadius: 12,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewAllText: {
+    color: '#2196F3',
+    fontSize: 14,
+    marginRight: 4,
   },
   coursesContainer: {
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   courseCard: {
-    width: 160,
+    width: 200,
     backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
-    marginRight: 10,
+    marginRight: 12,
     elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  courseImage: {
+    width: '100%',
+    height: 100,
+    borderRadius: 6,
+    marginBottom: 8,
   },
   courseImagePlaceholder: {
+    width: '100%',
     height: 100,
     backgroundColor: '#f5f5f5',
     borderRadius: 6,
@@ -137,62 +179,58 @@ const styles = {
     marginBottom: 8,
   },
   courseTitle: {
-    fontWeight: 'bold',
-    marginBottom: 4,
     fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+    minHeight: 36,
   },
   courseInstructor: {
     fontSize: 12,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   courseMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  courseDuration: {
-    fontSize: 11,
-    color: '#2196F3',
-  },
-  courseLevel: {
-    fontSize: 11,
-    color: '#666',
-  },
-  trainingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    marginBottom: 8,
   },
-  progressContainer: {
-    marginTop: 4,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#4CAF50',
-    borderRadius: 3,
-    marginBottom: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  sessionItem: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
   },
-  sessionDetails: {
-    flex: 1,
-    marginLeft: 8,
+  metaText: {
+    fontSize: 11,
+    color: '#666',
+    marginLeft: 4,
   },
-  viewAllButton: {
-    alignSelf: 'flex-end',
-    marginTop: 8,
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  viewAllText: {
-    color: '#2196F3',
-    fontSize: 12,
+  ratingText: {
+    fontSize: 11,
+    color: '#FFA000',
+    marginLeft: 2,
+    fontWeight: 'bold',
+  },
+  courseFee: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#388E3C',
+  },
+  loader: {
+    paddingVertical: 20,
+  },
+  errorText: {
+    color: '#f44336',
+    textAlign: 'center',
+    paddingVertical: 10,
   },
 };
 

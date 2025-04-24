@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -8,35 +8,36 @@ import {
   StyleSheet,
 } from 'react-native';
 import {Card, Title, IconButton, Chip} from 'react-native-paper';
+import firestore from '@react-native-firebase/firestore';
 
 const AllJobsScreen = ({navigation}) => {
   const [searchText, setSearchText] = useState('');
   const [selectedFilters, setSelectedFilters] = useState([]);
+  const [allJobs, setAllJobs] = useState([]);
 
   const jobTypes = ['Full-Time', 'Part-Time', 'Contract', 'Remote', 'Hybrid'];
   const experienceLevels = ['Entry', 'Mid', 'Senior', 'Executive'];
   const salaryRanges = ['<50k', '50k-100k', '100k-150k', '150k+'];
 
-  const allJobs = [
-    {
-      id: 1,
-      title: 'Senior React Native Developer',
-      company: 'Tech Solutions Inc.',
-      location: 'Remote',
-      type: 'Full-Time',
-      salary: '$120,000 - $150,000',
-      posted: '2 days ago',
-      description:
-        'We are looking for an experienced React Native developer...',
-      requirements: [
-        '5+ years of React Native experience',
-        'Strong JavaScript/TypeScript skills',
-        'Experience with Redux/MobX',
-      ],
-    },
-    // Add more jobs...
-  ];
+  // Fetch jobs from Firestore
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const jobsSnapshot = await firestore().collection('rvit_jobs').get();
+        const jobsData = jobsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setAllJobs(jobsData);
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+      }
+    };
 
+    fetchJobs();
+  }, []);
+
+  // Filter jobs based on search text and selected filters
   const filteredJobs = allJobs.filter(job => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -44,7 +45,7 @@ const AllJobsScreen = ({navigation}) => {
     const matchesFilters =
       selectedFilters.length === 0 ||
       selectedFilters.includes(job.type) ||
-      selectedFilters.includes(job.experience);
+      selectedFilters.includes(job.salary);
     return matchesSearch && matchesFilters;
   });
 
@@ -133,7 +134,9 @@ const AllJobsScreen = ({navigation}) => {
                   <Text style={styles.jobType}>{job.type}</Text>
                   <Text style={styles.jobSalary}>{job.salary}</Text>
                 </View>
-                <Text style={styles.jobPosted}>{job.posted}</Text>
+                <Text style={styles.jobPosted}>
+                  {new Date(job.posted).toDateString()}
+                </Text>
               </Card.Content>
             </Card>
           </TouchableOpacity>

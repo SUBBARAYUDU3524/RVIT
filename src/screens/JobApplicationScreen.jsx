@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Platform,
   PermissionsAndroid,
+  Alert,
 } from 'react-native';
 import {
   Card,
@@ -17,6 +18,10 @@ import {
   HelperText,
 } from 'react-native-paper';
 import {pick} from '@react-native-documents/picker';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import storage from '@react-native-firebase/storage';
+import RNFS from 'react-native-fs';
 
 const JobApplicationScreen = ({route, navigation}) => {
   const {jobId} = route.params;
@@ -29,16 +34,37 @@ const JobApplicationScreen = ({route, navigation}) => {
     resume: null,
   });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (name, value) => {
-    setFormData(prev => ({...prev, [name]: value}));
-    if (errors[name]) {
-      setErrors(prev => ({...prev, [name]: ''}));
+  const requestStoragePermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          {
+            title: 'Storage Permission',
+            message: 'App needs access to your storage to upload files',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
     }
+    return true;
   };
 
   const pickResume = async () => {
     try {
+      const hasPermission = await requestStoragePermission();
+      if (!hasPermission) {
+        throw new Error('Storage permission denied');
+      }
+
       const [result] = await pick({
         mode: 'open',
         allowMultiSelection: false,
@@ -61,6 +87,57 @@ const JobApplicationScreen = ({route, navigation}) => {
     }
   };
 
+  const handleChange = (name, value) => {
+    setFormData(prev => ({...prev, [name]: value}));
+    if (errors[name]) {
+      setErrors(prev => ({...prev, [name]: ''}));
+    }
+  };
+
+  const uploadResume = async () => {
+    if (!formData.resume) return null;
+
+    const user = auth().currentUser;
+    if (!user) throw new Error('User not authenticated');
+
+    const filename = `resumes/${user.uid}/${Date.now()}_${
+      formData.resume.name
+    }`;
+    const reference = storage().ref(filename);
+
+    try {
+      let path = formData.resume.uri;
+      let tempFilePath = null;
+
+      // Handle Android content URIs
+      if (Platform.OS === 'android' && path.startsWith('content://')) {
+        // Create a temporary file path
+        tempFilePath = `${RNFS.CachesDirectoryPath}/${Date.now()}_${
+          formData.resume.name
+        }`;
+
+        // Copy the content URI to a temporary file
+        await RNFS.copyFile(path, tempFilePath);
+        path = `file://${tempFilePath}`;
+      } else if (Platform.OS === 'android' && !path.startsWith('file://')) {
+        path = `file://${path}`;
+      }
+
+      // Upload the file
+      await reference.putFile(path);
+
+      // Clean up temporary file if we created one
+      if (tempFilePath) {
+        RNFS.unlink(tempFilePath).catch(() => {});
+      }
+
+      return await reference.getDownloadURL();
+    } catch (error) {
+      console.error('Error uploading resume:', error);
+      throw error;
+    }
+  };
+
   const validate = () => {
     const newErrors = {};
     if (!formData.fullName) newErrors.fullName = 'Full name is required';
@@ -75,10 +152,62 @@ const JobApplicationScreen = ({route, navigation}) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (validate()) {
-      console.log('Submitted data:', formData);
-      navigation.navigate('ApplicationConfirmation');
+  const handleSubmit = async () => {
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const user = auth().currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Upload resume to storage and get download URL
+      const resumeUrl = await uploadResume();
+
+      // Prepare application data
+      const applicationData = {
+        jobId,
+        userId: user.uid,
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        experience: formData.experience,
+        coverLetter: formData.coverLetter,
+        resume: {
+          name: formData.resume.name,
+          url: resumeUrl,
+          size: formData.resume.size,
+        },
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        status: 'pending',
+      };
+
+      // Add to Firestore
+      await firestore().collection('jobApplications').add(applicationData);
+
+      // ✅ Clear form
+      setFormData({
+        fullName: '',
+        email: '',
+        phone: '',
+        experience: '',
+        coverLetter: '',
+        resume: null,
+      });
+
+      setErrors({}); // Clear any validation errors
+
+      Alert.alert('Success', 'Job applied successfully');
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      setErrors(prev => ({
+        ...prev,
+        submit: 'Failed to submit application. Please try again.',
+      }));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -178,10 +307,18 @@ const JobApplicationScreen = ({route, navigation}) => {
             </View>
           )}
 
+          {errors.submit && (
+            <HelperText type="error" style={styles.submitError}>
+              {errors.submit}
+            </HelperText>
+          )}
+
           <Button
             mode="contained"
             style={styles.submitButton}
-            onPress={handleSubmit}>
+            onPress={handleSubmit}
+            loading={isSubmitting}
+            disabled={isSubmitting}>
             Submit Application
           </Button>
         </Card.Content>
@@ -225,6 +362,7 @@ const styles = StyleSheet.create({
   fileName: {flex: 1, color: '#333'},
   fileSize: {color: '#666'},
   submitButton: {marginTop: 16, paddingVertical: 8, backgroundColor: '#2196F3'},
+  submitError: {marginBottom: 16, textAlign: 'center'},
 });
 
 export default JobApplicationScreen;

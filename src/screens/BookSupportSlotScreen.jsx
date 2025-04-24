@@ -1,96 +1,244 @@
-import React, {useState} from 'react';
 import {
   View,
   ScrollView,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import {Card, Title, Button, RadioButton, TextInput} from 'react-native-paper';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import {Card, Title, TextInput, Button} from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 
 const BookSupportSlotScreen = ({route, navigation}) => {
   const {category} = route.params;
-  const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [timeSlot, setTimeSlot] = useState('');
-  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [formData, setFormData] = useState({
+    supportType: '',
+    notes: '',
+  });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableSlots = [
-    '9:00 AM - 10:00 AM',
-    '11:00 AM - 12:00 PM',
-    '2:00 PM - 3:00 PM',
-    '4:00 PM - 5:00 PM',
+  const supportTypes = [
+    {label: 'Full Time Support', value: 'Full Time', icon: 'calendar'},
+    {label: 'Part Time Support', value: 'Part Time', icon: 'calendar-clock'},
+    {label: 'Contract Based', value: 'Contract', icon: 'file-sign'},
+    {label: 'Consultation', value: 'Consultation', icon: 'comment-question'},
+    {label: 'Emergency Support', value: 'Emergency', icon: 'alert-circle'},
   ];
 
-  const onChangeDate = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setDate(selectedDate);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = auth().currentUser;
+        if (user) {
+          const userDoc = await firestore()
+            .collection('users')
+            .doc(user.uid)
+            .get();
+          setUserData({
+            name: userDoc.data()?.name || user.displayName || '',
+            email: user.email || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!formData.supportType) {
+      Alert.alert('Error', 'Please select a support type');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const user = auth().currentUser;
+      if (!user) {
+        Alert.alert('Error', 'You must be logged in to book support');
+        return;
+      }
+
+      const jobRef = await firestore().collection('rvit_jobs').add({
+        userId: user.uid,
+        categoryId: category.id,
+        categoryName: category.name,
+        supportType: formData.supportType,
+        userName: userData.name,
+        userEmail: userData.email,
+        notes: formData.notes,
+        status: 'Pending',
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      });
+
+      // ✅ Reset formData
+      setFormData({
+        supportType: '',
+        notes: '',
+      });
+
+      // ✅ Then navigate
+      navigation.navigate('ConfirmSupport', {
+        jobId: jobRef.id,
+        category,
+        formData,
+      });
+    } catch (error) {
+      console.error('Error creating job:', error);
+      Alert.alert('Error', 'Failed to book support. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleBooking = () => {
-    // Handle booking logic
-    navigation.navigate('BookingConfirmation', {
-      category,
-      date,
-      timeSlot,
-      notes,
-    });
-  };
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Card style={styles.card}>
         <Card.Content>
-          <Title style={styles.title}>Book {category.name} Support</Title>
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}>
+              <Icon name="arrow-left" size={24} color="#2196F3" />
+            </TouchableOpacity>
+            <Title style={styles.title}>Book Support</Title>
+          </View>
 
-          <Title style={styles.sectionTitle}>Select Date</Title>
+          {/* Support Type Dropdown */}
+          <Text style={styles.label}>
+            Type of Support <Text style={styles.required}>*</Text>
+          </Text>
           <TouchableOpacity
-            style={styles.datePickerButton}
-            onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
+            style={styles.dropdownButton}
+            onPress={() => setDropdownOpen(!dropdownOpen)}>
+            <View style={styles.dropdownButtonContent}>
+              {formData.supportType ? (
+                <>
+                  <Icon
+                    name={
+                      supportTypes.find(t => t.value === formData.supportType)
+                        ?.icon || 'help-circle'
+                    }
+                    size={20}
+                    color="#2196F3"
+                    style={styles.dropdownIcon}
+                  />
+                  <Text style={styles.dropdownButtonText}>
+                    {
+                      supportTypes.find(t => t.value === formData.supportType)
+                        ?.label
+                    }
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.dropdownPlaceholder}>
+                  Select support type
+                </Text>
+              )}
+              <Icon
+                name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#666"
+              />
+            </View>
           </TouchableOpacity>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              onChange={onChangeDate}
-            />
+          {dropdownOpen && (
+            <View style={styles.dropdownOptions}>
+              {supportTypes.map((type, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setFormData({...formData, supportType: type.value});
+                    setDropdownOpen(false);
+                  }}>
+                  <Icon
+                    name={type.icon}
+                    size={20}
+                    color="#2196F3"
+                    style={styles.optionIcon}
+                  />
+                  <Text style={styles.optionText}>{type.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
 
-          <Title style={styles.sectionTitle}>Available Time Slots</Title>
-          <RadioButton.Group
-            onValueChange={value => setTimeSlot(value)}
-            value={timeSlot}>
-            {availableSlots.map((slot, index) => (
-              <View key={index} style={styles.radioItem}>
-                <RadioButton value={slot} />
-                <Text style={styles.radioLabel}>{slot}</Text>
-              </View>
-            ))}
-          </RadioButton.Group>
+          {/* User Details (non-editable) */}
+          <Text style={styles.label}>Full Name</Text>
+          <View style={styles.inputContainer}>
+            <Icon
+              name="account"
+              size={20}
+              color="#666"
+              style={styles.inputIcon}
+            />
+            <Text style={styles.readOnlyInput}>
+              {userData?.name || 'Not available'}
+            </Text>
+          </View>
 
-          <Title style={styles.sectionTitle}>Additional Notes</Title>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputContainer}>
+            <Icon
+              name="email"
+              size={20}
+              color="#666"
+              style={styles.inputIcon}
+            />
+            <Text style={styles.readOnlyInput}>
+              {userData?.email || 'Not available'}
+            </Text>
+          </View>
+
+          {/* Additional Notes */}
+          <Text style={styles.label}>Additional Notes</Text>
           <TextInput
             mode="outlined"
             multiline
-            numberOfLines={4}
-            placeholder="Describe your issue or specific needs"
-            value={notes}
-            onChangeText={setNotes}
+            numberOfLines={8}
+            placeholder="Describe your specific needs or requirements"
+            placeholderTextColor="#666"
+            value={formData.notes}
+            onChangeText={text => setFormData({...formData, notes: text})}
             style={styles.notesInput}
+            outlineColor="#ddd"
+            activeOutlineColor="#2196F3"
           />
 
+          {/* Submit Button */}
           <Button
             mode="contained"
-            style={styles.bookButton}
-            onPress={handleBooking}
-            disabled={!timeSlot}>
-            Confirm Booking
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            loading={isSubmitting}
+            disabled={isSubmitting || !formData.supportType}>
+            <Icon
+              name="calendar-check"
+              size={20}
+              color="#fff"
+              style={styles.buttonIcon}
+            />
+            <Text style={styles.submitButtonText}>Book Support Slot</Text>
           </Button>
         </Card.Content>
       </Card>
@@ -100,52 +248,131 @@ const BookSupportSlotScreen = ({route, navigation}) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 16,
     backgroundColor: '#f5f5f5',
+    flexGrow: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
-    borderRadius: 10,
+    borderRadius: 12,
+    elevation: 3,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  backButton: {
+    marginRight: 16,
   },
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
+    color: '#333',
+    flex: 1,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 16,
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#444',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  required: {
+    color: 'red',
+  },
+  dropdownButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 16,
     marginBottom: 8,
   },
-  datePickerButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  dateText: {
-    fontSize: 16,
-  },
-  radioItem: {
+  dropdownButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  radioLabel: {
-    fontSize: 14,
-    marginLeft: 8,
+  dropdownIcon: {
+    marginRight: 12,
+  },
+  dropdownButtonText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  dropdownPlaceholder: {
+    flex: 1,
+    fontSize: 16,
+    color: '#999',
+  },
+  dropdownOptions: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  optionIcon: {
+    marginRight: 12,
+  },
+  optionText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 56,
+    marginBottom: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  readOnlyInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#666',
   },
   notesInput: {
-    marginBottom: 16,
+    marginBottom: 24,
+    backgroundColor: '#fff',
   },
-  bookButton: {
-    marginTop: 16,
-    paddingVertical: 10,
+  submitButton: {
     backgroundColor: '#2196F3',
+    marginVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 50,
+  },
+  buttonIcon: {
+    marginRight: 10,
+  },
+  submitButtonText: {
+    color: '#fff',
+    paddingVertical: 10,
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

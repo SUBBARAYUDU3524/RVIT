@@ -5,8 +5,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from 'react-native';
-import {Card, Title, Button, IconButton} from 'react-native-paper';
+import {Card, Title, Button} from 'react-native-paper';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const SupportCategoryDetailsScreen = ({route, navigation}) => {
   const {category} = route.params;
@@ -16,16 +18,19 @@ const SupportCategoryDetailsScreen = ({route, navigation}) => {
       <ScrollView style={styles.scrollContainer}>
         <Card style={styles.headerCard}>
           <Card.Content style={styles.headerContent}>
-            <View style={styles.iconContainer}>
-              <IconButton
-                icon={category.icon}
-                size={48}
-                color="#2196F3"
-                style={styles.icon}
+            {category.imageUrl && (
+              <Image
+                source={{uri: category.imageUrl}}
+                style={styles.categoryImage}
+                resizeMode="cover"
               />
-            </View>
-            <Title style={styles.title}>{category.name}</Title>
-            <Text style={styles.description}>{category.description}</Text>
+            )}
+            <Title style={styles.title}>
+              {category.name || 'Support Category'}
+            </Title>
+            <Text style={styles.description}>
+              {category.description || 'Expert support for your needs'}
+            </Text>
           </Card.Content>
         </Card>
 
@@ -33,37 +38,35 @@ const SupportCategoryDetailsScreen = ({route, navigation}) => {
           <Card.Content>
             <Title style={styles.sectionTitle}>About This Support</Title>
             <Text style={styles.detailText}>
-              Our expert {category.name.toLowerCase()} support helps you resolve
-              issues quickly and efficiently. Get one-on-one sessions with our
-              certified engineers.
+              {category.about || 'Expert support tailored to your needs.'}
             </Text>
 
             <Title style={styles.sectionTitle}>What's Included</Title>
-            {[
-              'Personalized 1:1 session',
-              'Expert troubleshooting',
-              'Best practice guidance',
-              'Follow-up resources',
-            ].map((item, index) => (
-              <View key={index} style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>{item}</Text>
-              </View>
-            ))}
+            <View style={styles.mainTopicsContainer}>
+              {category.mainTopics &&
+                category.mainTopics.map((topic, index) => (
+                  <View key={index} style={styles.mainTopicItem}>
+                    <Ionicons
+                      name="arrow-forward-outline"
+                      size={30}
+                      color="#000"
+                    />
+
+                    <Text style={styles.mainTopicText}>{topic.title}</Text>
+                  </View>
+                ))}
+            </View>
 
             <Title style={styles.sectionTitle}>Available Experts</Title>
-            {[
-              {name: 'Alex Johnson', experience: '8 years'},
-              {name: 'Sarah Williams', experience: '6 years'},
-              {name: 'Michael Chen', experience: '10 years'},
-            ].map((expert, index) => (
-              <View key={index} style={styles.expertCard}>
-                <Text style={styles.expertName}>{expert.name}</Text>
-                <Text style={styles.expertExp}>
-                  {expert.experience} experience
-                </Text>
-              </View>
-            ))}
+            {category.experts &&
+              category.experts.map((expert, index) => (
+                <View key={index} style={styles.expertCard}>
+                  <Text style={styles.expertName}>{expert.name}</Text>
+                  <Text style={styles.expertExp}>
+                    {expert.experience} years experience
+                  </Text>
+                </View>
+              ))}
           </Card.Content>
         </Card>
       </ScrollView>
@@ -92,19 +95,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 16,
     backgroundColor: '#2196F3',
+    overflow: 'hidden',
   },
   headerContent: {
     alignItems: 'center',
     paddingVertical: 24,
   },
-  iconContainer: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  categoryImage: {
+    width: 100,
+    height: 100,
     borderRadius: 50,
-    padding: 16,
     marginBottom: 16,
-  },
-  icon: {
-    margin: 0,
+    borderWidth: 3,
+    borderColor: 'white',
   },
   title: {
     fontSize: 24,
@@ -135,19 +138,25 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 16,
   },
-  bulletItem: {
+  mainTopicsContainer: {
+    marginBottom: 16,
+  },
+  mainTopicItem: {
     flexDirection: 'row',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  bullet: {
-    marginRight: 8,
-    color: '#2196F3',
+  mainTopicImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
   },
-  bulletText: {
-    flex: 1,
+  mainTopicText: {
     fontSize: 14,
-    lineHeight: 22,
+    marginLeft: 5,
     color: '#333',
+    flex: 1,
   },
   expertCard: {
     backgroundColor: '#f5f5f5',

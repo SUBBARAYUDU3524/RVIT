@@ -17,6 +17,9 @@ import JobApplicationScreen from '../screens/JobApplicationScreen';
 import AllSupportCategoriesScreen from '../screens/AllSupportCategoriesScreen';
 import SupportCategoryDetailsScreen from '../screens/SupportCategoryDetailsScreen';
 import BookSupportSlotScreen from '../screens/BookSupportSlotScreen';
+import NewSupportRequestScreen from '../screens/NewSupportRequestScreen';
+import SupportRequestDetails from '../screens/SupportRequestDetails';
+import ConfirmSupportScreen from '../screens/ConfirmSupportScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,11 +46,20 @@ const HomeStack = () => (
     <Stack.Screen name="AllJobs" component={AllJobsScreen} />
     <Stack.Screen name="JobDetails" component={JobDetailsScreen} />
     <Stack.Screen
+      name="SupportRequestDetails"
+      component={SupportRequestDetails}
+    />
+    <Stack.Screen
+      name="NewSupportRequest"
+      component={NewSupportRequestScreen}
+    />
+    <Stack.Screen
       name="AllSupportCategories"
       component={AllSupportCategoriesScreen}
     />
     <Stack.Screen name="JobApplication" component={JobApplicationScreen} />
     <Stack.Screen name="BookSupportSlot" component={BookSupportSlotScreen} />
+    <Stack.Screen name="ConfirmSupport" component={ConfirmSupportScreen} />
     <Stack.Screen
       name="SupportCategoryDetails"
       component={SupportCategoryDetailsScreen}

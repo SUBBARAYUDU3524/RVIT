@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -8,79 +8,44 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import {Card, Title, Paragraph, IconButton} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import appdevelopment from '../assets/appdevelopment.jpg';
-import uiux from '../assets/uiux.jpg';
-import aws from '../assets/aws.jpg';
-import node from '../assets/node.jpg';
+import firestore from '@react-native-firebase/firestore';
 
 const {width} = Dimensions.get('window');
 
-const courseData = [
-  {
-    id: 1,
-    title: 'Advanced React Native',
-    instructor: 'Dr. Sarah Johnson',
-    duration: '6 Weeks',
-    fee: '$299',
-    rating: 4.8,
-    students: 1245,
-    image: appdevelopment,
-    category: 'Mobile Development',
-    description:
-      'Master React Native with advanced patterns and performance optimization techniques.',
-  },
-  {
-    id: 2,
-    title: 'Node.js Microservices',
-    instructor: 'Michael Chen',
-    duration: '8 Weeks',
-    fee: '$349',
-    rating: 4.6,
-    students: 892,
-    image: node,
-    category: 'Backend Development',
-    description:
-      'Build scalable microservices architecture with Node.js and Docker.',
-  },
-  {
-    id: 3,
-    title: 'UX/UI Design Fundamentals',
-    instructor: 'Emily Rodriguez',
-    duration: '4 Weeks',
-    fee: '$249',
-    rating: 4.9,
-    students: 2103,
-    image: uiux,
-    category: 'Design',
-    description:
-      'Learn professional design principles and tools from industry experts.',
-  },
-  {
-    id: 4,
-    title: 'AWS Certified Solutions Architect',
-    instructor: 'David Wilson',
-    duration: '10 Weeks',
-    fee: '$399',
-    rating: 4.7,
-    students: 1567,
-    image: aws,
-    category: 'Cloud Computing',
-    description:
-      'Prepare for AWS certification with hands-on labs and real-world scenarios.',
-  },
-];
-
 const AllCourses = ({navigation}) => {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const querySnapshot = await firestore().collection('courses').get();
+        const coursesData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCourses(coursesData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching courses: ', error);
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
   const renderCourseItem = ({item}) => (
     <TouchableOpacity
       onPress={() => navigation.navigate('CourseDetails', {course: item})}
       activeOpacity={0.9}>
       <Card style={styles.courseCard}>
         <Image
-          source={item.image}
+          source={{uri: item.imageUrl}}
           style={styles.courseImage}
           resizeMode="cover"
         />
@@ -99,7 +64,7 @@ const AllCourses = ({navigation}) => {
             </View>
             <View style={styles.metaItem}>
               <Icon name="currency-usd" size={14} color="#666" />
-              <Text style={styles.metaText}>{item.fee}</Text>
+              <Text style={styles.metaText}>${item.fee}</Text>
             </View>
             <View style={styles.metaItem}>
               <Icon name="star" size={14} color="#FFD700" />
@@ -116,6 +81,14 @@ const AllCourses = ({navigation}) => {
       </Card>
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -136,9 +109,9 @@ const AllCourses = ({navigation}) => {
       </View>
 
       <FlatList
-        data={courseData}
+        data={courses}
         renderItem={renderCourseItem}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -165,6 +138,11 @@ const AllCourses = ({navigation}) => {
             </ScrollView>
           </View>
         }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No courses found</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -175,6 +153,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
     paddingHorizontal: 16,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     flexDirection: 'row',

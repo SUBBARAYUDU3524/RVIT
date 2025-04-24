@@ -1,148 +1,116 @@
-import React from 'react';
-import {View, TouchableOpacity, Text, ScrollView} from 'react-native';
-import {Card, Title, IconButton} from 'react-native-paper';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import {Card, Title} from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import firestore from '@react-native-firebase/firestore';
 
 const SupportSection = React.forwardRef(({navigation}, ref) => {
-  const supportRequests = [
-    {
-      id: 1,
-      type: 'Debugging',
-      date: 'Today, 2:30 PM',
-      status: 'Scheduled',
-      engineer: 'Alex Johnson',
-    },
-    {
-      id: 2,
-      type: 'Deployment',
-      date: 'Yesterday',
-      status: 'Completed',
-      rating: 4.5,
-    },
-  ];
+  const [supportCategories, setSupportCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const supportCategories = [
-    {
-      id: 1,
-      name: 'Debugging',
-      icon: 'bug',
-      description: 'Get help with code debugging',
-    },
-    {
-      id: 2,
-      name: 'Deployment',
-      icon: 'cloud-upload',
-      description: 'Deployment support',
-    },
-    {
-      id: 3,
-      name: 'Performance',
-      icon: 'speedometer',
-      description: 'Performance optimization',
-    },
-    {
-      id: 4,
-      name: 'Architecture',
-      icon: 'sitemap',
-      description: 'System design consulting',
-    },
-    {
-      id: 5,
-      name: 'Security',
-      icon: 'shield',
-      description: 'Security reviews',
-    },
-  ];
+  useEffect(() => {
+    const fetchSupportCategories = async () => {
+      try {
+        const snapshot = await firestore().collection('support').limit(3).get();
+        const categoriesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setSupportCategories(categoriesData);
+      } catch (err) {
+        console.error('Error fetching support categories:', err);
+        setError('Failed to load support categories. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSupportCategories();
+  }, []);
+
+  if (error) {
+    return (
+      <Card style={styles.sectionCard} ref={ref}>
+        <Card.Content>
+          <Title style={styles.sectionTitle}>Support Categories</Title>
+          <Text style={styles.errorText}>{error}</Text>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   return (
     <Card style={styles.sectionCard} ref={ref}>
       <Card.Content>
-        <Title>Technical Support</Title>
-        {supportRequests.map((request, index) => (
-          <View
-            key={request.id}
-            style={[
-              styles.supportItem,
-              index < supportRequests.length - 1 && styles.supportItemBorder,
-            ]}>
-            <View style={styles.supportTypeIcon}>
-              <IconButton
-                icon={request.status === 'Completed' ? 'check-circle' : 'clock'}
-                color={request.status === 'Completed' ? '#4CAF50' : '#FFA500'}
-                size={20}
-              />
-            </View>
-            <View style={styles.supportDetails}>
-              <Text style={styles.supportType}>{request.type}</Text>
-              <Text style={styles.supportDate}>{request.date}</Text>
-              {request.status === 'Completed' && (
-                <View style={styles.ratingContainer}>
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <IconButton
-                      key={star}
-                      icon={star <= request.rating ? 'star' : 'star-outline'}
-                      size={16}
-                      color="#FFD700"
-                    />
-                  ))}
-                </View>
-              )}
-              {request.status !== 'Completed' && (
-                <Text style={styles.supportEngineer}>
-                  With: {request.engineer}
-                </Text>
-              )}
-            </View>
-            <TouchableOpacity
-              style={styles.supportAction}
-              onPress={() =>
-                navigation.navigate('SupportDetails', {requestId: request.id})
-              }>
-              <Text style={styles.supportActionText}>
-                {request.status === 'Completed' ? 'View' : 'Details'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity
-          style={styles.newSupportButton}
-          onPress={() => navigation.navigate('NewSupportRequest')}>
-          <Text style={styles.newSupportButtonText}>+ New Support Request</Text>
-        </TouchableOpacity>
-
-        <View style={styles.categoriesHeader}>
-          <Title style={styles.categoriesTitle}>Support Categories</Title>
+        <View style={styles.headerContainer}>
+          <Title style={styles.sectionTitle}>Technical Support</Title>
           <TouchableOpacity
+            style={styles.viewAllButton}
             onPress={() => navigation.navigate('AllSupportCategories')}>
             <Text style={styles.viewAllText}>View All</Text>
+            <Icon name="chevron-right" size={16} color="#2196F3" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesScroll}>
-          {supportCategories.map(category => (
-            <TouchableOpacity
-              key={category.id}
-              style={styles.categoryCard}
-              onPress={() =>
-                navigation.navigate('SupportCategoryDetails', {category})
-              }>
-              <View style={styles.categoryIconContainer}>
-                <IconButton
-                  icon={category.icon}
-                  size={28}
-                  color="#2196F3"
-                  style={styles.categoryIcon}
-                />
-              </View>
-              <Text style={styles.categoryName}>{category.name}</Text>
-              <Text style={styles.categoryDescription} numberOfLines={2}>
-                {category.description}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color="#2196F3"
+            style={styles.loader}
+          />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesContainer}>
+            {supportCategories.map(category => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.categoryCard}
+                onPress={() =>
+                  navigation.navigate('BookSupportSlot', {category})
+                }>
+                <View style={styles.categoryIconContainer}>
+                  {category.imageUrl ? (
+                    <Image
+                      source={{uri: category.imageUrl}}
+                      style={styles.categoryImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Icon name="help-circle" size={30} color="#2196F3" />
+                  )}
+                </View>
+                <Text style={styles.categoryName} numberOfLines={1}>
+                  {category.name ||
+                    category.mainTopics?.[0]?.title ||
+                    'Support Category'}
+                </Text>
+                <Text style={styles.categoryDescription} numberOfLines={2}>
+                  {category.description ||
+                    'Expert support for your technical needs'}
+                </Text>
+                <Text style={styles.priceText}>$1.00 booking fee</Text>
+                {category.experts?.length > 0 && (
+                  <View style={styles.expertsContainer}>
+                    <Text style={styles.expertsLabel}>
+                      {category.experts.length}{' '}
+                      {category.experts.length > 1 ? 'Experts' : 'Expert'}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </Card.Content>
     </Card>
   );
@@ -150,112 +118,106 @@ const SupportSection = React.forwardRef(({navigation}, ref) => {
 
 const styles = {
   sectionCard: {
-    marginBottom: 16,
-    borderRadius: 10,
+    backgroundColor: '#fff',
+    marginBottom: 80,
+    borderRadius: 12,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  supportItem: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  supportItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  supportTypeIcon: {
-    marginRight: 10,
-  },
-  supportDetails: {
-    flex: 1,
-  },
-  supportType: {
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  supportDate: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  supportEngineer: {
-    fontSize: 12,
-    color: '#2196F3',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  supportAction: {
-    marginLeft: 10,
-  },
-  supportActionText: {
-    color: '#2196F3',
-    fontSize: 14,
-  },
-  newSupportButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#2196F3',
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  newSupportButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  sectionCard: {
-    marginBottom: 16,
-    borderRadius: 10,
-    elevation: 2,
-  },
-  categoriesHeader: {
+  headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  categoriesTitle: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   viewAllText: {
     color: '#2196F3',
     fontSize: 14,
+    marginRight: 4,
   },
-  categoriesScroll: {
-    marginBottom: 16,
+  categoriesContainer: {
+    paddingVertical: 4,
   },
   categoryCard: {
-    width: 140,
+    width: 180,
     backgroundColor: '#fff',
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
     marginRight: 12,
     elevation: 1,
-    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   categoryIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#e3f2fd',
-    borderRadius: 50,
-    padding: 8,
-    marginBottom: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    alignSelf: 'center',
   },
-  categoryIcon: {
-    margin: 0,
+  categoryImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   categoryName: {
+    fontSize: 14,
     fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
     textAlign: 'center',
-    marginBottom: 4,
   },
   categoryDescription: {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 16,
   },
-  supportRequestsTitle: {
-    marginTop: 16,
+  priceText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  expertsContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: 'center',
+  },
+  expertsLabel: {
+    fontSize: 11,
+    color: '#666',
+  },
+  loader: {
+    paddingVertical: 20,
+  },
+  errorText: {
+    color: '#f44336',
+    textAlign: 'center',
+    paddingVertical: 10,
   },
 };
 
