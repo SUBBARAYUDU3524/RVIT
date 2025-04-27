@@ -76,7 +76,7 @@ const SupportSection = React.forwardRef(({navigation}, ref) => {
                 key={category.id}
                 style={styles.categoryCard}
                 onPress={() =>
-                  navigation.navigate('BookSupportSlot', {category})
+                  navigation.navigate('SupportCategoryDetails', {category})
                 }>
                 <View style={styles.categoryIconContainer}>
                   {category.imageUrl ? (
@@ -98,7 +98,6 @@ const SupportSection = React.forwardRef(({navigation}, ref) => {
                   {category.description ||
                     'Expert support for your technical needs'}
                 </Text>
-                <Text style={styles.priceText}>$1.00 booking fee</Text>
                 {category.experts?.length > 0 && (
                   <View style={styles.expertsContainer}>
                     <Text style={styles.expertsLabel}>
@@ -111,6 +110,12 @@ const SupportSection = React.forwardRef(({navigation}, ref) => {
             ))}
           </ScrollView>
         )}
+
+        {/* <TouchableOpacity
+          style={styles.newSupportButton}
+          onPress={() => navigation.navigate('NewSupportRequest')}>
+          <Text style={styles.newSupportButtonText}>+ New Support Request</Text>
+        </TouchableOpacity> */}
       </Card.Content>
     </Card>
   );
@@ -190,15 +195,8 @@ const styles = {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
     lineHeight: 16,
-  },
-  priceText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    textAlign: 'center',
-    marginBottom: 8,
   },
   expertsContainer: {
     backgroundColor: '#f5f5f5',
@@ -210,6 +208,19 @@ const styles = {
   expertsLabel: {
     fontSize: 11,
     color: '#666',
+  },
+  newSupportButton: {
+    marginTop: 16,
+    padding: 14,
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    alignItems: 'center',
+    elevation: 2,
+  },
+  newSupportButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   loader: {
     paddingVertical: 20,

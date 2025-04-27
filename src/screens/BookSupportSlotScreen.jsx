@@ -1,3 +1,4 @@
+import React, {useState, useEffect} from 'react';
 import {
   View,
   ScrollView,
@@ -69,17 +70,17 @@ const BookSupportSlotScreen = ({route, navigation}) => {
         return;
       }
 
-      const jobRef = await firestore().collection('rvit_jobs').add({
-        userId: user.uid,
-        categoryId: category.id,
-        categoryName: category.name,
-        supportType: formData.supportType,
-        userName: userData.name,
-        userEmail: userData.email,
-        notes: formData.notes,
-        status: 'Pending',
-        createdAt: firestore.FieldValue.serverTimestamp(),
-      });
+      // const supportRef = await firestore().collection('rvit_support').add({
+      //   userId: user.uid,
+      //   categoryId: category.id,
+      //   categoryName: category.name,
+      //   supportType: formData.supportType,
+      //   userName: userData.name,
+      //   userEmail: userData.email,
+      //   notes: formData.notes,
+      //   status: 'Pending',
+      //   createdAt: firestore.FieldValue.serverTimestamp(),
+      // });
 
       // ✅ Reset formData
       setFormData({
@@ -89,7 +90,8 @@ const BookSupportSlotScreen = ({route, navigation}) => {
 
       // ✅ Then navigate
       navigation.navigate('ConfirmSupport', {
-        jobId: jobRef.id,
+        // supportId: supportRef.id,
+        userData,
         category,
         formData,
       });

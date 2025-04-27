@@ -1,31 +1,155 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   ScrollView,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {Card, Title, Button} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import firestore from '@react-native-firebase/firestore';
+import {WebView} from 'react-native-webview';
 
 const ConfirmSupportScreen = ({route, navigation}) => {
   const {userData, category, formData} = route.params;
-  const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
+  const [showPaypalWebview, setShowPaypalWebview] = useState(false);
+  const [paypalUrl, setPaypalUrl] = useState('');
+  const [orderId, setOrderId] = useState(null);
 
-  const handleConfirm = async () => {
-    setConfirming(true);
+  const createPaypalOrder = async () => {
     try {
+      setConfirming(true);
+      const response = await fetch(
+        'http://localhost:5000/api/create-paypal-order',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            supportType: formData.supportType,
+            category: category.name,
+            userEmail: userData.email,
+          }),
+        },
+      );
+
+      const data = await response.json();
+      console.log('data', data);
+      console.log('payapal is created ');
+      if (data.id) {
+        setOrderId(data.id);
+        const approvalUrl = data.links.find(
+          link => link.rel === 'approve',
+        ).href;
+        setPaypalUrl(approvalUrl);
+        setShowPaypalWebview(true);
+      }
     } catch (error) {
-      console.error('Error confirming booking:', error);
-      Alert.alert('Error', 'Failed to confirm booking. Please try again.');
-    } finally {
+      console.error('PayPal order creation error:', error);
+      Alert.alert('Error', 'Failed to initialize PayPal payment');
       setConfirming(false);
     }
   };
+
+  const handlePaymentSuccess = async () => {
+    try {
+      const response = await fetch(
+        'http://localhost:5000/api/capture-paypal-order',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderID: orderId,
+            bookingData: {
+              userData,
+              category,
+              formData,
+              paymentStatus: 'completed',
+              paymentAmount: 1.0,
+              paymentMethod: 'PayPal',
+              createdAt: new Date().toISOString(),
+            },
+          }),
+        },
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        await firestore()
+          .collection('supportBookings')
+          .add({
+            userId: userData.uid,
+            userName: userData.name,
+            userEmail: userData.email,
+            supportType: formData.supportType,
+            category: category.name,
+            notes: formData.notes || '',
+            status: 'pending',
+            paymentStatus: 'completed',
+            paymentAmount: 1.0,
+            paymentMethod: 'PayPal',
+            paymentId: data.capture.id,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+          });
+
+        Alert.alert(
+          'Booking Confirmed',
+          'Your support booking has been confirmed and payment received. We will contact you soon.',
+          [{text: 'OK', onPress: () => navigation.navigate('Home')}],
+        );
+      } else {
+        throw new Error('Payment capture failed');
+      }
+    } catch (error) {
+      console.error('Payment confirmation error:', error);
+      Alert.alert(
+        'Payment Error',
+        'Your booking was created but we encountered an issue confirming payment. Please contact support.',
+        [{text: 'OK', onPress: () => navigation.navigate('Home')}],
+      );
+    } finally {
+      setConfirming(false);
+      setShowPaypalWebview(false);
+    }
+  };
+
+  const handleWebViewNavigationStateChange = newNavState => {
+    const {url} = newNavState;
+    if (!url) return;
+
+    if (url.includes('paypal-success')) {
+      setShowPaypalWebview(false);
+      handlePaymentSuccess();
+    }
+
+    if (url.includes('paypal-cancel')) {
+      setShowPaypalWebview(false);
+      Alert.alert('Payment Cancelled', 'You cancelled the PayPal payment.');
+      setConfirming(false);
+    }
+  };
+
+  if (showPaypalWebview) {
+    return (
+      <WebView
+        source={{uri: paypalUrl}}
+        onNavigationStateChange={handleWebViewNavigationStateChange}
+        style={{flex: 1}}
+        startInLoadingState={true}
+        renderLoading={() => (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        )}
+      />
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -33,6 +157,13 @@ const ConfirmSupportScreen = ({route, navigation}) => {
         <Card.Content>
           <View style={styles.header}>
             <Title style={styles.title}>Confirm Your Booking</Title>
+          </View>
+
+          <View style={styles.paymentNotice}>
+            <Icon name="information" size={20} color="#2196F3" />
+            <Text style={styles.paymentNoticeText}>
+              A $1.00 payment is required to confirm your support booking
+            </Text>
           </View>
 
           <View style={styles.statusBadge}>
@@ -131,16 +262,18 @@ const ConfirmSupportScreen = ({route, navigation}) => {
           <Button
             mode="contained"
             style={styles.confirmButton}
-            onPress={handleConfirm}
+            onPress={createPaypalOrder}
             loading={confirming}
             disabled={confirming}>
             <Icon
-              name="check-circle"
+              name="credit-card"
               size={20}
               color="#fff"
               style={styles.buttonIcon}
             />
-            <Text style={styles.confirmButtonText}>Confirm Booking</Text>
+            <Text style={styles.confirmButtonText}>
+              {confirming ? 'Processing...' : 'Pay $1.00 & Confirm Booking'}
+            </Text>
           </Button>
         </Card.Content>
       </Card>
@@ -158,6 +291,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
   card: {
     borderRadius: 12,
@@ -174,16 +308,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  jobIdContainer: {
-    backgroundColor: '#e3f2fd',
-    padding: 8,
-    borderRadius: 4,
-    alignSelf: 'center',
-    marginBottom: 16,
+  paymentNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
   },
-  jobIdText: {
-    color: '#2196F3',
-    fontWeight: '500',
+  paymentNoticeText: {
+    marginLeft: 10,
+    color: '#0D47A1',
     fontSize: 14,
   },
   statusBadge: {
@@ -260,7 +395,6 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    paddingVertical: 10,
     fontSize: 16,
   },
 });
