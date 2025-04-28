@@ -18,7 +18,10 @@ const ConfirmSupportScreen = ({route, navigation}) => {
   const [showPaypalWebview, setShowPaypalWebview] = useState(false);
   const [paypalUrl, setPaypalUrl] = useState('');
   const [orderId, setOrderId] = useState(null);
-
+  const BACKEND_URL = 'http://localhost:5000';
+  console.log(userData, 'userDatat');
+  console.log(category, 'categort');
+  console.log(formData, 'formData');
   const createPaypalOrder = async () => {
     try {
       setConfirming(true);
@@ -38,8 +41,6 @@ const ConfirmSupportScreen = ({route, navigation}) => {
       );
 
       const data = await response.json();
-      console.log('data', data);
-      console.log('payapal is created ');
       if (data.id) {
         setOrderId(data.id);
         const approvalUrl = data.links.find(
@@ -51,71 +52,8 @@ const ConfirmSupportScreen = ({route, navigation}) => {
     } catch (error) {
       console.error('PayPal order creation error:', error);
       Alert.alert('Error', 'Failed to initialize PayPal payment');
-      setConfirming(false);
-    }
-  };
-
-  const handlePaymentSuccess = async () => {
-    try {
-      const response = await fetch(
-        'http://localhost:5000/api/capture-paypal-order',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            orderID: orderId,
-            bookingData: {
-              userData,
-              category,
-              formData,
-              paymentStatus: 'completed',
-              paymentAmount: 1.0,
-              paymentMethod: 'PayPal',
-              createdAt: new Date().toISOString(),
-            },
-          }),
-        },
-      );
-
-      const data = await response.json();
-      if (data.success) {
-        await firestore()
-          .collection('supportBookings')
-          .add({
-            userId: userData.uid,
-            userName: userData.name,
-            userEmail: userData.email,
-            supportType: formData.supportType,
-            category: category.name,
-            notes: formData.notes || '',
-            status: 'pending',
-            paymentStatus: 'completed',
-            paymentAmount: 1.0,
-            paymentMethod: 'PayPal',
-            paymentId: data.capture.id,
-            createdAt: firestore.FieldValue.serverTimestamp(),
-          });
-
-        Alert.alert(
-          'Booking Confirmed',
-          'Your support booking has been confirmed and payment received. We will contact you soon.',
-          [{text: 'OK', onPress: () => navigation.navigate('Home')}],
-        );
-      } else {
-        throw new Error('Payment capture failed');
-      }
-    } catch (error) {
-      console.error('Payment confirmation error:', error);
-      Alert.alert(
-        'Payment Error',
-        'Your booking was created but we encountered an issue confirming payment. Please contact support.',
-        [{text: 'OK', onPress: () => navigation.navigate('Home')}],
-      );
     } finally {
       setConfirming(false);
-      setShowPaypalWebview(false);
     }
   };
 
@@ -131,7 +69,53 @@ const ConfirmSupportScreen = ({route, navigation}) => {
     if (url.includes('paypal-cancel')) {
       setShowPaypalWebview(false);
       Alert.alert('Payment Cancelled', 'You cancelled the PayPal payment.');
-      setConfirming(false);
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    try {
+      const response = await fetch(
+        'http://localhost:5000/api/capture-paypal-order',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({orderID: orderId}),
+        },
+      );
+
+      const data = await response.json();
+      console.log(data, 'data');
+      if (data.success) {
+        await firestore().collection('supportBookings').add({
+          userId: userData.uid,
+          userName: userData.name,
+          userEmail: userData.email,
+          supportType: formData.supportType,
+          category: category.name,
+          status: 'confirmed',
+          paymentStatus: 'completed',
+          paymentAmount: 1.0,
+          paymentMethod: 'PayPal',
+          paymentId: data.capture.id,
+          createdAt: firestore.FieldValue.serverTimestamp(),
+        });
+
+        Alert.alert(
+          'Booking Confirmed',
+          'Your support booking has been confirmed. We will contact you soon.',
+          [{text: 'OK', onPress: () => navigation.navigate('Home')}],
+        );
+      } else {
+        throw new Error('Payment capture failed');
+      }
+    } catch (error) {
+      console.error('Payment confirmation error:', error);
+      Alert.alert(
+        'Payment Error',
+        'Your booking was created but we encountered an issue confirming payment. Please contact support.',
+      );
     }
   };
 
@@ -150,7 +134,6 @@ const ConfirmSupportScreen = ({route, navigation}) => {
       />
     );
   }
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Card style={styles.card}>

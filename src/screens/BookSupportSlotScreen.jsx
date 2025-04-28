@@ -42,6 +42,7 @@ const BookSupportSlotScreen = ({route, navigation}) => {
             .doc(user.uid)
             .get();
           setUserData({
+            uid: user.uid,
             name: userDoc.data()?.name || user.displayName || '',
             email: user.email || '',
           });
